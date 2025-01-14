@@ -11,38 +11,39 @@ public:
     std::cout << "Constructed: " << *this;
   }
 
-  Test(const Test& other) : d_a(other.d_a), d_b(other.d_b), d_id(object_count++) {
+  Test(const Test &other)
+      : d_a(other.d_a), d_b(other.d_b), d_id(object_count++) {
     std::cout << "Copy Constructed: " << *this;
   };
 
-  Test(Test&& other) : d_a(std::move(other.d_a)), d_b(std::move(other.d_b)), d_id(object_count++){
+  Test(Test &&other)
+      : d_a(std::move(other.d_a)), d_b(std::move(other.d_b)),
+        d_id(object_count++) {
     std::cout << "Move Constructed: " << *this;
   };
 
-  Test& operator=(Test&&) {
+  Test &operator=(Test &&) {
     std::cout << "Move Assigned: " << *this;
     return *this;
   }
 
-  Test& operator=(const Test& other) {
+  Test &operator=(const Test &other) {
     std::cout << "Copy Assigned: " << *this;
     return *this;
   }
 
-  ~Test(){
-    std::cout << "Destructed: " << *this;
-  }
+  ~Test() { std::cout << "Destructed: " << *this; }
 
-  friend std::ostream& operator<<(std::ostream& out, const Test& val) {
+  friend std::ostream &operator<<(std::ostream &out, const Test &val) {
     out << "Test(" << val.d_id << ")" << std::endl;
     return out;
   }
+
 private:
   int d_a;
   std::string d_b;
   int d_id;
 };
-
 
 int main() {
   std::cout << "Hello Word" << std::endl;
@@ -60,7 +61,7 @@ int main() {
   it = list.end();
   list.insert(it, 3);
 
-  it = list.end(); 
+  it = list.end();
   list.insert(it, 5);
 
   it = list.begin();
@@ -68,13 +69,23 @@ int main() {
   it++;
   list.insert(it, 420);
 
+  list.push_back(0);
+  list.push_back(0);
+  list.push_back(1);
+  list.push_back(2);
+  list.push_back(3);
 
-  std::cout << list.pop_back() << std::endl;
-  std::cout << list.pop_back() << std::endl;
-  std::cout << list.pop_back() << std::endl;
-  std::cout << list.pop_back() << std::endl;
-  std::cout << list.pop_back() << std::endl;
-  std::cout << list.pop_back() << std::endl;
+  std::cout << "Before Delete" << std::endl;
+  for (auto it = list.begin(); it != list.end(); ++it) {
+    std::cout << (*it) << std::endl;
+  }
+
+  list.remove(0);
+
+  std::cout << "Before Delete" << std::endl;
+  for (auto it = list.begin(); it != list.end(); ++it) {
+    std::cout << (*it) << std::endl;
+  }
 
   return 0;
 }

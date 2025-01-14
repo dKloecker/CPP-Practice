@@ -19,6 +19,7 @@ private:
 public:
   bool empty() { return d_left == nullptr; }
   void clear();
+  void remove(const T &val);
 
   T &back();
   T &front();
@@ -35,6 +36,7 @@ public:
   Iterator begin() { return Iterator(d_left); }
   Iterator end() { return Iterator(nullptr); }
   Iterator insert(const Iterator &pos, const T &val);
+  Iterator erase(const Iterator &pos);
 };
 
 // ============================================================== //
@@ -62,8 +64,6 @@ public:
   const std::shared_ptr<Node> &prev() const { return d_prev; }
   std::shared_ptr<Node> &prev() { return d_prev; }
 };
-
-
 
 // ============================================================== //
 // ========================= ITERATOR =========================== //
@@ -122,7 +122,7 @@ public:
 // ============================================================== //
 
 template <typename T> void DoubleLinkedList<T>::clear() {
-  // TODO: Does this really free up resources? 
+  // TODO: Does this really free up resources?
   // I think not!
   d_left = nullptr;
   d_right = nullptr;
@@ -138,7 +138,7 @@ DoubleLinkedList<T>::insert(const DoubleLinkedList<T>::Iterator &pos,
                             const T &val) {
   if (pos == end()) {
     push_back(val);
-    return Iterator(d_right); 
+    return Iterator(d_right);
   } else if (pos == begin()) {
     push_front(val);
     return Iterator(d_left);
@@ -153,6 +153,48 @@ DoubleLinkedList<T>::insert(const DoubleLinkedList<T>::Iterator &pos,
   prev->next() = newNode;
   node->prev() = newNode;
   return Iterator(newNode);
+}
+
+template <typename T> void DoubleLinkedList<T>::remove(const T &val) {
+  auto it = begin();
+  while (it != end()) {
+    if (*it == val) {
+      it = erase(it); 
+    } else {
+      it++;
+    }
+  }
+}
+
+template <typename T>
+typename DoubleLinkedList<T>::Iterator
+DoubleLinkedList<T>::erase(const DoubleLinkedList<T>::Iterator &pos) {
+  std::shared_ptr<Node> node = pos.d_node;
+  if (node == nullptr) {
+    // Iterator is end of list
+    return end();
+  }
+
+  std::shared_ptr<Node> prev = node->prev();
+  std::shared_ptr<Node> next = node->next();
+
+  if (prev == nullptr && next == nullptr) {
+    // There is only one element
+    return end();
+  } else if (prev == nullptr) {
+    // We are deleting first element of list
+    d_left = next;
+    next->prev() = nullptr;
+    return begin();
+  } else if (next == nullptr) {
+    // We are deleting last element of list
+    prev->next() = nullptr;
+    return end();
+  } else {
+    prev->next() = next;
+    next->prev() = prev;
+    return Iterator(next);
+  }
 }
 
 template <typename T>
