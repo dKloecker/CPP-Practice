@@ -81,11 +81,12 @@ int main() {
   }
 
   list.remove(0);
-
+  //
   std::cout << "Before Delete" << std::endl;
   for (auto it = list.begin(); it != list.end(); ++it) {
     std::cout << (*it) << std::endl;
   }
 
+  list.clear();
   return 0;
 }

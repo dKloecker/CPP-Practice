@@ -13,8 +13,8 @@ template <typename T> class DoubleLinkedList {
   class Iterator;
 
 private:
-  std::shared_ptr<Node> d_left = nullptr;
-  std::shared_ptr<Node> d_right = nullptr;
+  Node* d_left = nullptr;
+  Node* d_right = nullptr;
 
 public:
   bool empty() { return d_left == nullptr; }
@@ -46,23 +46,26 @@ public:
 template <typename T> class DoubleLinkedList<T>::Node {
 private:
   T d_val;
-  std::shared_ptr<Node> d_next = nullptr;
-  std::shared_ptr<Node> d_prev = nullptr;
+  Node *d_next = nullptr;
+  Node *d_prev = nullptr;
 
 public:
   template <typename C = T>
-  Node(C val, std::shared_ptr<Node> prev = nullptr,
-       std::shared_ptr<Node> next = nullptr)
+  Node(C val, Node *prev, Node *next)
       : d_val(std::move(val)), d_prev(prev), d_next(next){};
+
+  ~Node() { 
+    std::cout << "Deleting Node" << std::endl; 
+  }
 
   const T &val() const { return d_val; }
   T &val() { return d_val; }
 
-  const std::shared_ptr<Node> &next() const { return d_next; }
-  std::shared_ptr<Node> &next() { return d_next; }
+  const Node *&next() const { return d_next; }
+  Node *&next() { return d_next; }
 
-  const std::shared_ptr<Node> &prev() const { return d_prev; }
-  std::shared_ptr<Node> &prev() { return d_prev; }
+  const Node *&prev() const { return d_prev; }
+  Node *&prev() { return d_prev; }
 };
 
 // ============================================================== //
@@ -73,10 +76,10 @@ template <typename T> class DoubleLinkedList<T>::Iterator {
   friend DoubleLinkedList;
 
 private:
-  std::shared_ptr<Node> d_node = nullptr;
+  Node* d_node = nullptr;
 
 public:
-  Iterator(std::shared_ptr<Node> node) : d_node(node) {};
+  Iterator(Node* node) : d_node(node) {};
   Iterator(const Iterator &o) : d_node(o.d_node) {};
 
   const Iterator &operator++() {
@@ -122,10 +125,13 @@ public:
 // ============================================================== //
 
 template <typename T> void DoubleLinkedList<T>::clear() {
-  // TODO: Does this really free up resources?
-  // I think not!
-  d_left = nullptr;
-  d_right = nullptr;
+  Node* current = d_left;
+  while (current) {
+    Node* nextNode = current->next();
+    delete current;
+    current = nextNode;
+  }
+  d_left = d_right = nullptr;
 }
 
 template <typename T> T &DoubleLinkedList<T>::front() { return d_left->val(); }
@@ -144,9 +150,9 @@ DoubleLinkedList<T>::insert(const DoubleLinkedList<T>::Iterator &pos,
     return Iterator(d_left);
   }
 
-  std::shared_ptr<Node> node = pos.d_node;
-  std::shared_ptr<Node> prev = node->prev();
-  std::shared_ptr<Node> newNode = std::make_shared<Node>(val);
+  Node* node = pos.d_node;
+  Node* prev = node->prev();
+  Node* newNode = new Node(val, nullptr, nullptr);
 
   newNode->prev() = prev;
   newNode->next() = node;
@@ -159,7 +165,7 @@ template <typename T> void DoubleLinkedList<T>::remove(const T &val) {
   auto it = begin();
   while (it != end()) {
     if (*it == val) {
-      it = erase(it); 
+      it = erase(it);
     } else {
       it++;
     }
@@ -169,32 +175,46 @@ template <typename T> void DoubleLinkedList<T>::remove(const T &val) {
 template <typename T>
 typename DoubleLinkedList<T>::Iterator
 DoubleLinkedList<T>::erase(const DoubleLinkedList<T>::Iterator &pos) {
-  std::shared_ptr<Node> node = pos.d_node;
-  if (node == nullptr) {
-    // Iterator is end of list
+  Node* node = pos.d_node;
+  if (!node) {
     return end();
   }
 
-  std::shared_ptr<Node> prev = node->prev();
-  std::shared_ptr<Node> next = node->next();
+  Node* prev = node->prev();
+  Node* next = node->next();
 
-  if (prev == nullptr && next == nullptr) {
-    // There is only one element
-    return end();
-  } else if (prev == nullptr) {
-    // We are deleting first element of list
-    d_left = next;
-    next->prev() = nullptr;
-    return begin();
-  } else if (next == nullptr) {
-    // We are deleting last element of list
-    prev->next() = nullptr;
-    return end();
-  } else {
+  if (prev) {
     prev->next() = next;
-    next->prev() = prev;
-    return Iterator(next);
+  } else {
+    d_left = next;
   }
+
+  if (next) {
+    next->prev() = prev;
+  } else {
+    d_right = prev;
+  }
+
+  delete node;
+  return Iterator(next);
+  //
+  // if (prev == nullptr && next == nullptr) {
+  //   // There is only one element
+  //   return end();
+  // } else if (prev == nullptr) {
+  //   // We are deleting first element of list
+  //   d_left = next;
+  //   next->prev() = nullptr;
+  //   return begin();
+  // } else if (next == nullptr) {
+  //   // We are deleting last element of list
+  //   prev->next() = nullptr;
+  //   return end();
+  // } else {
+  //   prev->next() = next;
+  //   next->prev() = prev;
+  //   return Iterator(next);
+  // }
 }
 
 template <typename T>
@@ -206,18 +226,21 @@ T &DoubleLinkedList<T>::emplace_back(Args... args) {
 
 template <typename T> T DoubleLinkedList<T>::pop_back() {
   T val = std::move(d_right->val());
+  Node * temp = d_right;
   d_right = d_right->prev();
 
-  if (d_right != nullptr) {
+  if (d_right) {
     d_right->next() = nullptr;
+  } else {
+    d_left = nullptr;
   }
-
+  
+  delete temp;
   return val;
 }
 
 template <typename T> void DoubleLinkedList<T>::push_back(T val) {
-  std::shared_ptr<Node> newNode =
-      std::make_shared<Node>(std::move(val), d_right);
+  Node* newNode = new Node(std::move(val), d_right, nullptr);
 
   if (empty()) {
     d_left = newNode;
@@ -230,8 +253,7 @@ template <typename T> void DoubleLinkedList<T>::push_back(T val) {
 }
 
 template <typename T> void DoubleLinkedList<T>::push_front(T val) {
-  std::shared_ptr<Node> newNode =
-      std::make_shared<Node>(std::move(val), nullptr, d_left);
+  Node* newNode = new Node(std::move(val), nullptr, d_left);
 
   if (empty()) {
     d_left = newNode;
@@ -252,11 +274,15 @@ T &DoubleLinkedList<T>::emplace_front(Args... args) {
 
 template <typename T> T DoubleLinkedList<T>::pop_front() {
   T val = std::move(d_left->val());
+  Node * temp = d_left;
   d_left = d_left->next();
 
-  if (d_left != nullptr) {
-    d_right->prev() = nullptr;
+  if (d_left) {
+    d_left->prev() = nullptr;
+  } else {
+    d_right = nullptr;
   }
 
+  delete temp;
   return val;
 }
