@@ -24,21 +24,29 @@ public:
 
   bool operator==(const Expected<T, E> &other) const;
   bool operator!=(const Expected<T, E> &other) const;
+  const T *operator->() const;
+  const T &operator*() const;
 
-  template <typename F> auto and_then(F &&fn) const;
-  template <typename F> auto or_else(F &&fn) const;
-  // What is difference between and_then and transform?
-  // template <typename F> auto transform(F &&fn) const;
+  template <typename F> auto transform(F &&fn) const;
+  template <typename F> auto transform_error(F &&fn) const;
 
 private:
   std::optional<T> d_val;
   std::optional<E> d_unexpected;
 };
 
+template <typename T, typename E> const T *Expected<T, E>::operator->() const {
+  return &value();
+}
+
+template <typename T, typename E> const T &Expected<T, E>::operator*() const {
+  return value();
+}
+
 template <typename T, typename E>
 template <typename F>
-auto Expected<T, E>::and_then(F &&fn) const {
-  using R = decltype(std::invoke(fn, value()));
+auto Expected<T, E>::transform(F &&fn) const {
+  using R = decltype(std::invoke(std::forward<F>(fn), value()));
   Expected<R, E> res;
 
   if (*this) {
@@ -51,14 +59,14 @@ auto Expected<T, E>::and_then(F &&fn) const {
 
 template <typename T, typename E>
 template <typename F>
-auto Expected<T, E>::or_else(F &&fn) const {
-  using R = decltype(std::invoke(fn, error()));
+auto Expected<T, E>::transform_error(F &&fn) const {
+  using R = decltype(std::invoke(std::forward<F>(fn), error()));
   Expected<T, R> res;
 
   if (*this) {
     res = value();
   } else {
-    res = std::invoke(fn, error());
+    res = std::invoke(std::forward<F>(fn), error());
   }
 
   return res;

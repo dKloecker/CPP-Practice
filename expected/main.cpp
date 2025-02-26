@@ -96,8 +96,8 @@ void test_complex_types() {
   assert(failure.error() == "complex error");
 }
 
-void test_and_then() {
-  std::cout << "Testing with and_then()..." << std::endl;
+void test_transform() {
+  std::cout << "Testing with transform()..." << std::endl;
   auto fn = [](int a) {
     if (a == 0) {
       return false;
@@ -109,14 +109,58 @@ void test_and_then() {
   Expected<int, std::string> has_value{5};
   Expected<int, std::string> does_not_have_value{"Error Message"};
 
-  auto result_1 = has_value.and_then(fn);
-  auto result_2 = does_not_have_value.and_then(fn);
+  auto result_1 = has_value.transform(fn);
+  auto result_2 = does_not_have_value.transform(fn);
 
   assert(result_1.has_value());
   assert(result_1.value() == true);
 
   assert(!result_2.has_value());
   assert(result_2.error() == does_not_have_value.error());
+}
+
+void test_transform_error() {
+  std::cout << "Testing with transform_error()..." << std::endl;
+
+  auto error_handler = [](const std::string &error) {
+    return true; // Convert any error to false
+  };
+
+  Expected<int, std::string> success(100);
+  Expected<int, std::string> failure("error message");
+
+  auto result1 = success.transform_error(error_handler);
+  auto result2 = failure.transform_error(error_handler);
+
+  assert(result1.has_value());
+  assert(result1.value() == 100); // Original value preserved
+
+  assert(!result2.has_value());
+  assert(result2.error() == true); // Error handled and converted
+}
+
+void test_dereference_operators() {
+  std::cout << "Testing dereference operators..." << std::endl;
+
+  struct TestStruct {
+    int x = 42;
+    std::string str = "test";
+  };
+
+  Expected<TestStruct, std::string> success(TestStruct{});
+
+  // Test arrow operator
+  assert(success->x == 42);
+  assert(success->str == "test");
+
+  // Test dereference operator
+  const TestStruct &ref = *success;
+  assert(ref.x == 42);
+  assert(ref.str == "test");
+
+  // Test with primitive type
+  Expected<int, std::string> num_success(123);
+  assert(*num_success == 123);
 }
 
 int main() {
@@ -127,7 +171,9 @@ int main() {
     test_boolean_operations();
     test_equality();
     test_complex_types();
-    test_and_then();
+    test_transform();
+    test_transform_error();
+    test_dereference_operators();
 
     std::cout << "All tests passed successfully!" << std::endl;
   } catch (const std::exception &e) {
